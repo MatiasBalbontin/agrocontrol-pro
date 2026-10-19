@@ -148,7 +148,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [settings, setSettings] = useState<AppSettings>(() => {
     try {
       const saved = localStorage.getItem(`${STORAGE_KEY}_settings`);
-      return saved ? JSON.parse(saved) : initialSettings;
+      return saved ? { ...initialSettings, ...JSON.parse(saved) } : initialSettings;
     } catch {
       return initialSettings;
     }

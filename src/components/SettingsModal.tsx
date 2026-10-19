@@ -70,7 +70,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   const [copiedPullCmd, setCopiedPullCmd] = useState(false);
   const [copiedPushCmd, setCopiedPushCmd] = useState(false);
 
-  if (!isOpen) return null;
+  // Ejecución directa de git pull en entorno Electron (Modo Escritorio)
+  const [isPullingGit, setIsPullingGit] = useState(false);
+  const [pullExecutionResult, setPullExecutionResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  // Sincronizar formData cada vez que se abra el modal o cambien los settings
+  React.useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        companyName: settings?.companyName || '',
+        companyRut: settings?.companyRut || '',
+        companyAddress: settings?.companyAddress || '',
+        companyPhone: settings?.companyPhone || '',
+        companyRepresentative: settings?.companyRepresentative || 'Juan Ignacio Valenzuela Prieto',
+        companyRepresentativeRut: settings?.companyRepresentativeRut || '12.345.678-9',
+        signatureCity: settings?.signatureCity || 'Curicó',
+        contractTemplate: settings?.contractTemplate || DEFAULT_CONTRACT_TEMPLATE,
+        enableMonetaryValuation: settings?.enableMonetaryValuation ?? false,
+        companyLogoUrl: settings?.companyLogoUrl || '',
+        localDocumentsPath: settings?.localDocumentsPath || 'C:\\AgroControl\\Documentos',
+        githubRepoUrl: settings?.githubRepoUrl || 'https://github.com/MatiasBalbontin/agrocontrol-pro',
+      });
+      setUpdateResult(null);
+      setPullExecutionResult(null);
+    }
+  }, [isOpen, settings]);
+
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -166,10 +191,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     setTimeout(() => setCopiedPushCmd(false), 2500);
   };
 
-  // Ejecución directa de git pull en entorno Electron (Modo Escritorio)
-  const [isPullingGit, setIsPullingGit] = useState(false);
-  const [pullExecutionResult, setPullExecutionResult] = useState<{ success: boolean; message: string } | null>(null);
-
   const handleExecutePullElectron = async () => {
     if (!window.electronAPI?.executeGitPull) return;
     setIsPullingGit(true);
@@ -201,7 +222,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     }
   };
 
-  // Selector nativo de carpeta de Windows
   const handlePickFolder = async () => {
     if (window.electronAPI?.selectFolder) {
       const folder = await window.electronAPI.selectFolder();
@@ -221,6 +241,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
       onClose();
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-900/60 backdrop-blur-xs">
