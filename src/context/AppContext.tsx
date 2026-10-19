@@ -9,6 +9,7 @@ import {
   UserRole,
   AuditLogEntry,
   WorkerDocument,
+  WorkerContractCompliance,
 } from '../types';
 import {
   initialBranches,
@@ -20,13 +21,6 @@ import {
 } from '../data/mockData';
 import { getTodayDateString, formatDate } from '../utils/formatters';
 import { DEFAULT_CONTRACT_TEMPLATE } from '../data/contractDefaultTemplate';
-
-export interface WorkerContractCompliance {
-  status: 'NO_CONTRACT' | 'EXPIRED' | 'VALID';
-  label: string;
-  isBlinking: boolean;
-  daysDiff?: number;
-}
 
 interface AppContextType {
   branches: Branch[];
@@ -54,6 +48,7 @@ interface AppContextType {
     doc: Omit<WorkerDocument, 'id' | 'uploadDate'> & { uploadDate?: string }
   ) => void;
   deleteWorkerDocument: (workerId: string, documentId: string) => void;
+  markWorkerDocumentAsSigned: (workerId: string, documentId: string) => void;
   addProductionRecord: (record: Omit<ProductionRecord, 'id' | 'createdAt'>) => string;
   batchAddProduction: (
     records: Omit<ProductionRecord, 'id' | 'createdAt'>[],
@@ -287,6 +282,82 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addAuditLog('EDITAR_SUCURSAL', `Edición de sucursal ${id}`);
   };
 
+  const generateContractText = (worker: Partial<Worker>, branchId?: string): string => {
+    let template = (settings.contractTemplate || DEFAULT_CONTRACT_TEMPLATE)
+      .replace(/^#+\s*/gm, '')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/\*\*/g, '');
+    const targetBranchId = branchId || worker.branchId || (activeBranchId !== 'ALL' ? activeBranchId : branches[0]?.id);
+    const branch = branches.find(b => b.id === targetBranchId) || branches[0];
+
+    const rep = settings.companyRepresentative || 'Juan Ignacio Valenzuela Prieto';
+    const repRut = settings.companyRepresentativeRut || '12.345.678-9';
+    const city = settings.signatureCity || (branch?.location ? branch.location.split(',')[1]?.trim() : 'Curicó') || 'Curicó';
+
+    let nacString = '';
+    if (worker.birthDate) {
+      nacString = `${worker.birthDate}${worker.age ? ` (${worker.age} años)` : ''}`;
+    } else if (worker.age) {
+      nacString = `${worker.age} años de edad`;
+    } else {
+      nacString = '[Fecha de nacimiento no informada]';
+    }
+
+    const modalidadContratoMap: Record<string, string> = {
+      FAENA: 'contrato de trabajo por faena determinada',
+      PLAZO_FIJO: 'contrato de trabajo a plazo fijo',
+      INDEFINIDO: 'contrato de trabajo indefinido',
+    };
+    const modalidadContratoStr = worker.contractType
+      ? modalidadContratoMap[worker.contractType] || 'contrato de trabajo por faena determinada'
+      : 'contrato de trabajo por faena determinada';
+
+    const modalidadPagoStr = worker.paymentMode
+      ? worker.paymentMode === 'DÍA'
+        ? 'diaria a razón'
+        : worker.paymentMode === 'HORA'
+        ? 'por hora a razón'
+        : worker.paymentMode === 'KILO'
+        ? 'a trato por kilo a razón'
+        : 'por tarea a razón'
+      : 'diaria a razón';
+
+    const tarifaStr = (worker.unitRate || 28000).toLocaleString('es-CL');
+
+    const replacements: Record<string, string> = {
+      '{{EMPRESA_NOMBRE}}': settings.companyName || 'Agrícola & Servicios del Valle SpA',
+      '{{EMPRESA_RUT}}': settings.companyRut || '76.890.123-K',
+      '{{EMPRESA_DOMICILIO}}': settings.companyAddress || "Av. Libertador Bernardo O'Higgins 450, Of. 602, Curicó",
+      '{{EMPRESA_REPRESENTANTE}}': rep,
+      '{{EMPRESA_REPRESENTANTE_RUT}}': repRut,
+      '{{TRABAJADOR_NOMBRE}}': worker.name || '[NOMBRE DEL TRABAJADOR]',
+      '{{TRABAJADOR_RUT}}': worker.rut || '[RUT DEL TRABAJADOR]',
+      '{{TRABAJADOR_NACIMIENTO}}': nacString,
+      '{{TRABAJADOR_ESTADO_CIVIL}}': worker.maritalStatus || 'Soltero(a)',
+      '{{TRABAJADOR_DOMICILIO}}': worker.address || '[Domicilio registrado en ficha]',
+      '{{TRABAJADOR_TELEFONO}}': worker.phone || '[Teléfono no registrado]',
+      '{{LABOR}}': worker.labor || 'Cosecha y Recolección',
+      '{{FAENA_NOMBRE}}': branch?.name || 'Faena Fundo Los Aromos',
+      '{{FAENA_UBICACION}}': branch?.location || 'Camino Los Niches Km 8.5, Curicó',
+      '{{CIUDAD_FIRMA}}': city,
+      '{{FECHA_INGRESO}}': worker.hireDate ? formatDate(worker.hireDate) : formatDate(getTodayDateString()),
+      '{{FECHA_TERMINO}}': worker.contractEndDate ? formatDate(worker.contractEndDate) : 'Conclusión total de la faena asignada',
+      '{{MODALIDAD_CONTRATO}}': modalidadContratoStr,
+      '{{MODALIDAD_PAGO}}': modalidadPagoStr,
+      '{{VALOR_TARIFA}}': tarifaStr,
+      '{{JORNADA_SEMANAL}}': worker.weeklyHours ? worker.weeklyHours.replace(/[^0-9]/g, '') || '40' : '40',
+      '{{JORNADA_DIARIA}}': worker.dailySchedule ? worker.dailySchedule.replace(/[^0-9]/g, '')?.slice(0, 1) || '8' : '8',
+      '{{AFP}}': worker.afp || 'AFP Habitat',
+      '{{SALUD}}': worker.health || 'Fonasa Tramo B',
+    };
+
+    let result = template;
+    for (const [tag, val] of Object.entries(replacements)) {
+      result = result.split(tag).join(val);
+    }
+    return result;
+  };
+
   const addWorker = (workerData: Omit<Worker, 'id'>): string => {
     const maxNum = workers.reduce((acc, w) => {
       const match = w.id.match(/TRAB-(\d+)/);
@@ -299,7 +370,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const nextId = `TRAB-${String(maxNum + 1).padStart(3, '0')}`;
     const newWorker: Worker = { ...workerData, id: nextId, paymentMode: workerData.paymentMode || 'DÍA' };
 
-    setWorkers(prev => [newWorker, ...prev]);
+    // Generar automáticamente el primer contrato (Contrato Plantilla oficial)
+    const initialContractText = generateContractText(newWorker, newWorker.branchId);
+    const initialContractDoc: WorkerDocument = {
+      id: `DOC-CTR-PLANTILLA-${Date.now()}`,
+      name: `Contrato_Plantilla_${newWorker.name.replace(/\s+/g, '_')}_Art159.txt`,
+      category: 'CONTRATO_PLANTILLA',
+      isSigned: false,
+      uploadDate: newWorker.hireDate || getTodayDateString(),
+      fileSize: `${Math.max(1, Math.round(initialContractText.length / 1024))} KB`,
+      fileType: 'text/plain',
+      fileData: `data:text/plain;charset=utf-8,${encodeURIComponent(initialContractText)}`,
+      notes: 'Contrato plantilla oficial generado al dar de alta al trabajador. Pendiente de firma física.',
+    };
+
+    const finalWorker: Worker = {
+      ...newWorker,
+      documents: newWorker.documents ? [initialContractDoc, ...newWorker.documents] : [initialContractDoc],
+    };
+
+    setWorkers(prev => [finalWorker, ...prev]);
 
     const newMovement: WorkerMovement = {
       id: `MOV-${Date.now()}`,
@@ -312,7 +402,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       reason: 'Incorporación a faena',
     };
     setMovements(prev => [newMovement, ...prev]);
-    addAuditLog('ALTA_TRABAJADOR', `Alta de trabajador ${newWorker.name} (${newWorker.rut}, ${nextId})`);
+    addAuditLog('ALTA_TRABAJADOR', `Alta de trabajador ${newWorker.name} (${newWorker.rut}, ${nextId}) con emisión de Contrato Plantilla`);
 
     return nextId;
   };
@@ -439,6 +529,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addAuditLog(
       'ELIMINAR_DOCUMENTO',
       `Eliminación de documento adjunto de ${worker?.name || workerId}`
+    );
+  };
+
+  const markWorkerDocumentAsSigned = (workerId: string, documentId: string) => {
+    setWorkers(prev =>
+      prev.map(w => {
+        if (w.id === workerId) {
+          const currentDocs = w.documents || [];
+          return {
+            ...w,
+            documents: currentDocs.map(d => {
+              if (d.id === documentId) {
+                return {
+                  ...d,
+                  category: 'CONTRATO_FIRMADO' as const,
+                  isSigned: true,
+                  name: d.name.includes('Plantilla') ? d.name.replace('Plantilla', 'Firmado') : `Firmado_${d.name}`,
+                  notes: (d.notes ? `${d.notes} · ` : '') + 'Ratificado como Contrato Vigente Firmado.',
+                };
+              }
+              return d;
+            }),
+          };
+        }
+        return w;
+      })
+    );
+
+    const worker = workers.find(w => w.id === workerId);
+    addAuditLog(
+      'CONTRATO_FIRMADO',
+      `Contrato ratificado como firmado y vigente para el trabajador ${worker?.name || workerId}`
     );
   };
 
@@ -816,105 +938,65 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.clear();
   };
 
-  const generateContractText = (worker: Partial<Worker>, branchId?: string): string => {
-    let template = (settings.contractTemplate || DEFAULT_CONTRACT_TEMPLATE)
-      .replace(/^#+\s*/gm, '')
-      .replace(/<br\s*\/?>/gi, '\n')
-      .replace(/\*\*/g, '');
-    const targetBranchId = branchId || worker.branchId || (activeBranchId !== 'ALL' ? activeBranchId : branches[0]?.id);
-    const branch = branches.find(b => b.id === targetBranchId) || branches[0];
-
-    const rep = settings.companyRepresentative || 'Juan Ignacio Valenzuela Prieto';
-    const repRut = settings.companyRepresentativeRut || '12.345.678-9';
-    const city = settings.signatureCity || (branch?.location ? branch.location.split(',')[1]?.trim() : 'Curicó') || 'Curicó';
-
-    let nacString = '';
-    if (worker.birthDate) {
-      nacString = `${worker.birthDate}${worker.age ? ` (${worker.age} años)` : ''}`;
-    } else if (worker.age) {
-      nacString = `${worker.age} años de edad`;
-    } else {
-      nacString = '[Fecha de nacimiento no informada]';
-    }
-
-    const modalidadContratoMap: Record<string, string> = {
-      FAENA: 'contrato de trabajo por faena determinada',
-      PLAZO_FIJO: 'contrato de trabajo a plazo fijo',
-      INDEFINIDO: 'contrato de trabajo indefinido',
-    };
-    const modalidadContratoStr = worker.contractType
-      ? modalidadContratoMap[worker.contractType] || 'contrato de trabajo por faena determinada'
-      : 'contrato de trabajo por faena determinada';
-
-    const modalidadPagoStr = worker.paymentMode
-      ? worker.paymentMode === 'DÍA'
-        ? 'diaria a razón'
-        : worker.paymentMode === 'HORA'
-        ? 'por hora a razón'
-        : worker.paymentMode === 'KILO'
-        ? 'a trato por kilo a razón'
-        : 'por tarea a razón'
-      : 'diaria a razón';
-
-    const tarifaStr = (worker.unitRate || 28000).toLocaleString('es-CL');
-
-    const replacements: Record<string, string> = {
-      '{{EMPRESA_NOMBRE}}': settings.companyName || 'Agrícola & Servicios del Valle SpA',
-      '{{EMPRESA_RUT}}': settings.companyRut || '76.890.123-K',
-      '{{EMPRESA_DOMICILIO}}': settings.companyAddress || "Av. Libertador Bernardo O'Higgins 450, Of. 602, Curicó",
-      '{{EMPRESA_REPRESENTANTE}}': rep,
-      '{{EMPRESA_REPRESENTANTE_RUT}}': repRut,
-      '{{TRABAJADOR_NOMBRE}}': worker.name || '[NOMBRE DEL TRABAJADOR]',
-      '{{TRABAJADOR_RUT}}': worker.rut || '[RUT DEL TRABAJADOR]',
-      '{{TRABAJADOR_NACIMIENTO}}': nacString,
-      '{{TRABAJADOR_ESTADO_CIVIL}}': worker.maritalStatus || 'Soltero(a)',
-      '{{TRABAJADOR_DOMICILIO}}': worker.address || '[Domicilio registrado en ficha]',
-      '{{TRABAJADOR_TELEFONO}}': worker.phone || '[Teléfono no registrado]',
-      '{{LABOR}}': worker.labor || 'Cosecha y Recolección',
-      '{{FAENA_NOMBRE}}': branch?.name || 'Faena Fundo Los Aromos',
-      '{{FAENA_UBICACION}}': branch?.location || 'Camino Los Niches Km 8.5, Curicó',
-      '{{CIUDAD_FIRMA}}': city,
-      '{{FECHA_INGRESO}}': worker.hireDate ? formatDate(worker.hireDate) : formatDate(getTodayDateString()),
-      '{{FECHA_TERMINO}}': worker.contractEndDate ? formatDate(worker.contractEndDate) : 'Conclusión total de la faena asignada',
-      '{{MODALIDAD_CONTRATO}}': modalidadContratoStr,
-      '{{MODALIDAD_PAGO}}': modalidadPagoStr,
-      '{{VALOR_TARIFA}}': tarifaStr,
-      '{{JORNADA_SEMANAL}}': worker.weeklyHours ? worker.weeklyHours.replace(/[^0-9]/g, '') || '40' : '40',
-      '{{JORNADA_DIARIA}}': worker.dailySchedule ? worker.dailySchedule.replace(/[^0-9]/g, '')?.slice(0, 1) || '8' : '8',
-      '{{AFP}}': worker.afp || 'AFP Habitat',
-      '{{SALUD}}': worker.health || 'Fonasa Tramo B',
-    };
-
-    let result = template;
-    for (const [tag, val] of Object.entries(replacements)) {
-      result = result.split(tag).join(val);
-    }
-    return result;
-  };
-
   const getWorkerContractStatus = (worker: Worker): WorkerContractCompliance => {
-    const hasContractDoc = (worker.documents || []).some(d => d.category === 'CONTRATO');
-    if (!hasContractDoc) {
+    if (worker.status === 'RETIRADO') {
       return {
-        status: 'NO_CONTRACT',
-        label: 'Sin Contrato',
-        isBlinking: true,
+        status: 'RETIRED',
+        label: 'Retirado / Finiquitado',
+        isBlinking: false,
       };
     }
-    if (worker.contractType !== 'INDEFINIDO' && worker.contractEndDate) {
-      const todayStr = getTodayDateString();
-      if (worker.contractEndDate < todayStr) {
-        return {
-          status: 'EXPIRED',
-          label: `Vencido (${worker.contractEndDate.slice(5).replace('-', '/')})`,
-          isBlinking: true,
-        };
+
+    const docs = worker.documents || [];
+    const signedContracts = docs.filter(
+      d => d.category === 'CONTRATO_FIRMADO' || (d.category === 'CONTRATO' && d.isSigned)
+    );
+    const templateContracts = docs.filter(
+      d => d.category === 'CONTRATO_PLANTILLA' || (d.category === 'CONTRATO' && !d.isSigned)
+    );
+
+    // Caso 1: Tiene Contrato Vigente (Firmado)
+    if (signedContracts.length > 0) {
+      if (worker.contractType !== 'INDEFINIDO' && worker.contractEndDate) {
+        const todayStr = getTodayDateString();
+        if (worker.contractEndDate < todayStr) {
+          return {
+            status: 'EXPIRED',
+            label: `Vencido (${worker.contractEndDate.slice(5).replace('-', '/')})`,
+            isBlinking: true,
+            signedCount: signedContracts.length,
+            templateCount: templateContracts.length,
+          };
+        }
       }
+      return {
+        status: 'VALID',
+        label: 'Contrato Vigente (Firmado)',
+        isBlinking: false,
+        signedCount: signedContracts.length,
+        templateCount: templateContracts.length,
+      };
     }
+
+    // Caso 2: Tiene Contrato Plantilla (Emitido / Pendiente de Firma)
+    if (templateContracts.length > 0) {
+      return {
+        status: 'PENDING_SIGNATURE',
+        label: 'Plantilla Emitida (Sin Firmar)',
+        isBlinking: true,
+        message: 'Tiene contrato plantilla oficial emitido, pendiente de firma y carga.',
+        signedCount: 0,
+        templateCount: templateContracts.length,
+      };
+    }
+
+    // Caso 3: Sin Contrato
     return {
-      status: 'VALID',
-      label: 'Contrato Vigente',
-      isBlinking: false,
+      status: 'NO_CONTRACT',
+      label: 'Sin Contrato',
+      isBlinking: true,
+      signedCount: 0,
+      templateCount: 0,
     };
   };
 
@@ -948,6 +1030,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteWorker,
         addWorkerDocument,
         deleteWorkerDocument,
+        markWorkerDocumentAsSigned,
         addProductionRecord,
         batchAddProduction,
         updateProductionRecord,

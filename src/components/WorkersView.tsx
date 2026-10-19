@@ -42,8 +42,11 @@ import {
   Calendar,
   Printer,
   AlertTriangle,
+  Eye,
+  Check,
 } from 'lucide-react';
 import { ContractPrintModal } from './ContractPrintModal';
+import { DocumentViewerModal } from './DocumentViewerModal';
 import {
   formatCLP,
   formatRUT,
@@ -67,6 +70,7 @@ export const WorkersView: React.FC = () => {
     deleteWorker,
     addWorkerDocument,
     deleteWorkerDocument,
+    markWorkerDocumentAsSigned,
     settings,
     getWorkerContractStatus,
   } = useApp();
@@ -80,6 +84,10 @@ export const WorkersView: React.FC = () => {
   const [isContractModalOpen, setIsContractModalOpen] = useState(false);
   const [contractModalWorker, setContractModalWorker] = useState<Partial<Worker> | null>(null);
 
+  // Document Viewer Modal State
+  const [viewingDoc, setViewingDoc] = useState<WorkerDocument | null>(null);
+  const [viewingWorker, setViewingWorker] = useState<Worker | null>(null);
+
   // Modal State for Worker Ficha (Add/Edit)
   const [isWorkerModalOpen, setIsWorkerModalOpen] = useState(false);
   const [editingWorker, setEditingWorker] = useState<Worker | null>(null);
@@ -87,7 +95,7 @@ export const WorkersView: React.FC = () => {
 
   // Document Management State
   const [docCategoryFilter, setDocCategoryFilter] = useState<'ALL' | DocumentCategory>('ALL');
-  const [newDocCategory, setNewDocCategory] = useState<DocumentCategory>('CONTRATO');
+  const [newDocCategory, setNewDocCategory] = useState<DocumentCategory>('CONTRATO_FIRMADO');
   const [newDocName, setNewDocName] = useState('');
   const [newDocNotes, setNewDocNotes] = useState('');
   const [newDocFileData, setNewDocFileData] = useState<string>('');
@@ -276,7 +284,9 @@ export const WorkersView: React.FC = () => {
     }
 
     const lower = file.name.toLowerCase();
-    if (lower.includes('contrato')) setNewDocCategory('CONTRATO');
+    if (lower.includes('firmado')) setNewDocCategory('CONTRATO_FIRMADO');
+    else if (lower.includes('plantilla')) setNewDocCategory('CONTRATO_PLANTILLA');
+    else if (lower.includes('contrato')) setNewDocCategory('CONTRATO_FIRMADO');
     else if (lower.includes('papeleta') || lower.includes('permiso') || lower.includes('vacacion'))
       setNewDocCategory('PAPELETA');
     else if (lower.includes('finiquito') || lower.includes('renuncia'))
@@ -304,16 +314,19 @@ export const WorkersView: React.FC = () => {
       newDocName.trim() ||
       `${newDocCategory.toLowerCase()}_${editingWorker.name.replace(/\s+/g, '_')}.pdf`;
 
+    const isSignedContract = newDocCategory === 'CONTRATO_FIRMADO';
+
     addWorkerDocument(editingWorker.id, {
       name: docTitle,
       category: newDocCategory,
+      isSigned: isSignedContract,
       notes: newDocNotes.trim() || undefined,
       fileSize: newDocFileSize || '320 KB',
       fileType: newDocFileType || 'application/pdf',
       fileData: newDocFileData || undefined,
     });
 
-    setDocNotice(`Documento "${docTitle}" (${newDocCategory}) adjuntado exitosamente a la ficha.`);
+    setDocNotice(`Documento "${docTitle}" adjuntado exitosamente al expediente.`);
     setNewDocName('');
     setNewDocNotes('');
     setNewDocFileData('');
@@ -348,14 +361,32 @@ export const WorkersView: React.FC = () => {
   };
 
   // Helper for Category Badges
-  const getDocCategoryBadge = (category: DocumentCategory) => {
+  const getDocCategoryBadge = (category: DocumentCategory, isSigned?: boolean) => {
     switch (category) {
-      case 'CONTRATO':
+      case 'CONTRATO_FIRMADO':
         return {
-          label: 'Contrato de Trabajo',
-          bg: 'bg-emerald-50 text-emerald-800 border-emerald-300',
+          label: 'Contrato Vigente (Firmado)',
+          bg: 'bg-emerald-100 text-emerald-950 border-emerald-300 font-bold',
+          icon: FileCheck,
+        };
+      case 'CONTRATO_PLANTILLA':
+        return {
+          label: 'Contrato Plantilla (Emitido)',
+          bg: 'bg-amber-100 text-amber-950 border-amber-300 font-semibold',
           icon: FileText,
         };
+      case 'CONTRATO':
+        return isSigned
+          ? {
+              label: 'Contrato Vigente (Firmado)',
+              bg: 'bg-emerald-100 text-emerald-950 border-emerald-300 font-bold',
+              icon: FileCheck,
+            }
+          : {
+              label: 'Contrato Plantilla (Emitido)',
+              bg: 'bg-amber-100 text-amber-950 border-amber-300 font-semibold',
+              icon: FileText,
+            };
       case 'PAPELETA':
         return {
           label: 'Papeleta / Permiso',
@@ -856,24 +887,37 @@ export const WorkersView: React.FC = () => {
                             {contractStatus.status === 'NO_CONTRACT' ? (
                               <span
                                 className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 border border-red-300 animate-pulse shadow-2xs"
-                                title="Obligatorio: Falta contrato adjunto"
+                                title="Obligatorio: Falta contrato en el expediente"
                               >
                                 <AlertTriangle className="w-3 h-3 text-red-600 shrink-0" />
                                 <span>⚠️ Sin Contrato</span>
                               </span>
+                            ) : contractStatus.status === 'PENDING_SIGNATURE' ? (
+                              <div className="flex flex-col">
+                                <span
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs"
+                                  title="Plantilla oficial emitida al ingresar el trabajador. Pendiente de firma física."
+                                >
+                                  <FileText className="w-3 h-3 text-amber-700 shrink-0" />
+                                  <span>Plantilla Emitida</span>
+                                </span>
+                                <span className="text-[10px] text-amber-700 font-semibold mt-0.5">
+                                  Pendiente Firma
+                                </span>
+                              </div>
                             ) : contractStatus.status === 'EXPIRED' ? (
                               <span
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 animate-pulse shadow-2xs"
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-900 border border-rose-300 animate-pulse shadow-2xs"
                                 title="Contrato vencido según fecha de término"
                               >
-                                <AlertTriangle className="w-3 h-3 text-amber-700 shrink-0" />
+                                <AlertTriangle className="w-3 h-3 text-rose-700 shrink-0" />
                                 <span>⏳ {contractStatus.label}</span>
                               </span>
                             ) : (
                               <div className="flex flex-col">
-                                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700">
+                                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
                                   <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
-                                  <span>Contrato Vigente</span>
+                                  <span>Contrato Vigente (Firmado)</span>
                                 </span>
                                 <span className="text-[10px] text-slate-500">
                                   {worker.contractType === 'INDEFINIDO'
@@ -1286,7 +1330,9 @@ export const WorkersView: React.FC = () => {
           : null;
         const workerDocs = currentWorkerInModal?.documents || [];
 
-        const contratosCount = workerDocs.filter(d => d.category === 'CONTRATO').length;
+        const contratosCount = workerDocs.filter(
+          d => d.category === 'CONTRATO' || d.category === 'CONTRATO_PLANTILLA' || d.category === 'CONTRATO_FIRMADO'
+        ).length;
         const papeletasCount = workerDocs.filter(d => d.category === 'PAPELETA').length;
         const finiquitosCount = workerDocs.filter(d => d.category === 'FINIQUITO').length;
         const cedulasCount = workerDocs.filter(d => d.category === 'CEDULA').length;
@@ -1295,6 +1341,10 @@ export const WorkersView: React.FC = () => {
         const displayedDocs =
           docCategoryFilter === 'ALL'
             ? workerDocs
+            : docCategoryFilter === 'CONTRATO'
+            ? workerDocs.filter(
+                d => d.category === 'CONTRATO' || d.category === 'CONTRATO_PLANTILLA' || d.category === 'CONTRATO_FIRMADO'
+              )
             : workerDocs.filter(d => d.category === docCategoryFilter);
 
         return (
@@ -1822,7 +1872,8 @@ export const WorkersView: React.FC = () => {
                               onChange={e => setNewDocCategory(e.target.value as DocumentCategory)}
                               className="w-full px-3 py-1.5 border border-slate-300 rounded-lg bg-white font-medium text-slate-900"
                             >
-                              <option value="CONTRATO">Contrato de Trabajo</option>
+                              <option value="CONTRATO_FIRMADO">Contrato Vigente (Firmado)</option>
+                              <option value="CONTRATO_PLANTILLA">Contrato Plantilla (Emitido / Borrador)</option>
                               <option value="PAPELETA">Papeleta (Vacaciones / Permiso / Licencia)</option>
                               <option value="FINIQUITO">Finiquito Laboral</option>
                               <option value="CEDULA">Cédula de Identidad / Pasaporte</option>
@@ -2000,15 +2051,45 @@ export const WorkersView: React.FC = () => {
                                   </div>
 
                                   <div className="flex items-center gap-1.5 shrink-0">
+                                    {/* Botón Ver Documento */}
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setViewingDoc(doc);
+                                        setViewingWorker(currentWorkerInModal);
+                                      }}
+                                      className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg font-bold text-xs border border-slate-300 transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
+                                      title="Visualizar documento en pantalla"
+                                    >
+                                      <Eye className="w-3.5 h-3.5 text-slate-600" />
+                                      <span>Ver</span>
+                                    </button>
+
+                                    {/* Botón Marcar Firmado (para contratos plantilla o no firmados) */}
+                                    {(doc.category === 'CONTRATO_PLANTILLA' || (doc.category === 'CONTRATO' && !doc.isSigned)) && (
+                                      <button
+                                        type="button"
+                                        onClick={() => markWorkerDocumentAsSigned(currentWorkerInModal.id, doc.id)}
+                                        className="px-2 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg font-semibold text-xs border border-emerald-300 transition-colors flex items-center gap-1 cursor-pointer"
+                                        title="Marcar este contrato como firmado y vigente"
+                                      >
+                                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                        <span className="hidden sm:inline">Firmar</span>
+                                      </button>
+                                    )}
+
+                                    {/* Botón Descargar */}
                                     <button
                                       type="button"
                                       onClick={() => handleDownloadDoc(doc, currentWorkerInModal)}
-                                      className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg font-bold text-xs border border-emerald-200 transition-colors flex items-center gap-1"
-                                      title="Descargar o ver archivo"
+                                      className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg font-bold text-xs border border-emerald-200 transition-colors flex items-center gap-1 cursor-pointer"
+                                      title="Descargar archivo a tu equipo"
                                     >
                                       <Download className="w-3.5 h-3.5" />
                                       <span className="hidden sm:inline">Descargar</span>
                                     </button>
+
+                                    {/* Botón Eliminar */}
                                     <button
                                       type="button"
                                       onClick={() => {
@@ -2016,7 +2097,7 @@ export const WorkersView: React.FC = () => {
                                           deleteWorkerDocument(currentWorkerInModal.id, doc.id);
                                         }
                                       }}
-                                      className="p-1.5 text-slate-300 hover:text-rose-600 rounded-lg transition-colors"
+                                      className="p-1.5 text-slate-300 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
                                       title="Eliminar documento"
                                     >
                                       <Trash2 className="w-4 h-4" />
@@ -2036,7 +2117,7 @@ export const WorkersView: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setIsWorkerModalOpen(false)}
-                      className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold text-xs shadow-xs"
+                      className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold text-xs shadow-xs cursor-pointer"
                     >
                       Cerrar Expediente
                     </button>
@@ -2056,6 +2137,25 @@ export const WorkersView: React.FC = () => {
         branchId={contractModalWorker?.branchId}
         onContractAttached={() => {
           setIsContractModalOpen(false);
+        }}
+      />
+
+      {/* MODAL DE VISUALIZACIÓN DE DOCUMENTOS (VER ARCHIVO / PDF / FOTO / CONTRATO) */}
+      <DocumentViewerModal
+        isOpen={!!viewingDoc}
+        doc={viewingDoc}
+        worker={viewingWorker}
+        companyName={settings?.companyName}
+        onClose={() => {
+          setViewingDoc(null);
+          setViewingWorker(null);
+        }}
+        onMarkAsSigned={docId => {
+          if (viewingWorker) {
+            markWorkerDocumentAsSigned(viewingWorker.id, docId);
+            setViewingDoc(null);
+            setViewingWorker(null);
+          }
         }}
       />
     </div>

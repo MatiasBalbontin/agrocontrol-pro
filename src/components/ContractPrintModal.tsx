@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Printer, Copy, Check, X, FileCheck, Building2, User, MapPin, Calendar } from 'lucide-react';
-import { Worker, Branch } from '../types';
+import { Printer, Copy, Check, X, FileCheck, FileText, Building2, User, MapPin, Calendar } from 'lucide-react';
+import { Worker, Branch, DocumentCategory } from '../types';
 import { useApp } from '../context/AppContext';
 
 interface ContractPrintModalProps {
@@ -38,27 +38,38 @@ export const ContractPrintModal: React.FC<ContractPrintModalProps> = ({
     window.print();
   };
 
-  const handleAttachToWorker = () => {
+  const [attachedMode, setAttachedMode] = useState<'PLANTILLA' | 'FIRMADO' | null>(null);
+
+  const handleAttachContract = (isSigned: boolean) => {
     if (!worker.id) return;
 
-    // Convert text to a plain data URL for downloadable preview
     const blob = new Blob([contractText], { type: 'text/plain;charset=utf-8' });
     const reader = new FileReader();
     reader.onloadend = () => {
       const dataUrl = reader.result as string;
+      const category: DocumentCategory = isSigned ? 'CONTRATO_FIRMADO' : 'CONTRATO_PLANTILLA';
+      const titlePrefix = isSigned ? 'Contrato_Firmado' : 'Contrato_Plantilla';
+
       addWorkerDocument(worker.id!, {
-        name: `Contrato_${(worker.name || 'Trabajador').replace(/\s+/g, '_')}_Art159.txt`,
-        category: 'CONTRATO',
+        name: `${titlePrefix}_${(worker.name || 'Trabajador').replace(/\s+/g, '_')}_Art159.txt`,
+        category,
+        isSigned,
         fileSize: `${Math.round(blob.size / 1024)} KB`,
         fileType: 'text/plain',
         fileData: dataUrl,
-        notes: `Generado desde plantilla oficial (${settings.companyName || 'Empresa'}) para faena ${branch?.name || ''}`,
+        notes: isSigned
+          ? `Contrato ratificado como vigente y firmado para faena ${branch?.name || ''}`
+          : `Contrato plantilla oficial emitido para firma del trabajador en faena ${branch?.name || ''}`,
       });
       setAttached(true);
+      setAttachedMode(isSigned ? 'FIRMADO' : 'PLANTILLA');
       if (onContractAttached) {
         onContractAttached();
       }
-      setTimeout(() => setAttached(false), 3000);
+      setTimeout(() => {
+        setAttached(false);
+        setAttachedMode(null);
+      }, 3000);
     };
     reader.readAsDataURL(blob);
   };
@@ -70,7 +81,7 @@ export const ContractPrintModal: React.FC<ContractPrintModalProps> = ({
         {/* Header - Hidden on Print */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50 rounded-t-xl print:hidden">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-emerald-600 flex items-center justify-center text-white">
+            <div className="w-10 h-10 rounded-lg bg-emerald-700 flex items-center justify-center text-white">
               <Printer className="w-5 h-5" />
             </div>
             <div>
@@ -89,18 +100,33 @@ export const ContractPrintModal: React.FC<ContractPrintModalProps> = ({
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors shadow-xs"
             >
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copied ? 'Copiado' : 'Copiar Texto'}</span>
+              <span>{copied ? 'Copiado' : 'Copiar'}</span>
             </button>
 
             {worker.id && (
-              <button
-                onClick={handleAttachToWorker}
-                disabled={attached}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-300 rounded-lg hover:bg-emerald-100 transition-colors shadow-xs disabled:opacity-50"
-              >
-                <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
-                <span>{attached ? '¡Vinculado a Ficha!' : 'Vincular como Contrato Vigente'}</span>
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleAttachContract(false)}
+                  disabled={attached}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-amber-900 bg-amber-50 border border-amber-300 rounded-lg hover:bg-amber-100 transition-colors shadow-xs disabled:opacity-50"
+                  title="Guardar como borrador / plantilla para entregar al trabajador"
+                >
+                  <FileText className="w-3.5 h-3.5 text-amber-700" />
+                  <span>{attached && attachedMode === 'PLANTILLA' ? '¡Plantilla Guardada!' : 'Guardar Plantilla'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleAttachContract(true)}
+                  disabled={attached}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-emerald-900 bg-emerald-50 border border-emerald-300 rounded-lg hover:bg-emerald-100 transition-colors shadow-xs disabled:opacity-50"
+                  title="Marcar y registrar como contrato vigente firmado"
+                >
+                  <FileCheck className="w-3.5 h-3.5 text-emerald-700" />
+                  <span>{attached && attachedMode === 'FIRMADO' ? '¡Contrato Vigente!' : 'Marcar Vigente (Firmado)'}</span>
+                </button>
+              </div>
             )}
 
             <button

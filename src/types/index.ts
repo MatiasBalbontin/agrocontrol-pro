@@ -12,6 +12,8 @@ export interface CustomField {
 }
 
 export type DocumentCategory =
+  | 'CONTRATO_PLANTILLA'
+  | 'CONTRATO_FIRMADO'
   | 'CONTRATO'
   | 'PAPELETA'
   | 'FINIQUITO'
@@ -28,6 +30,7 @@ export interface WorkerDocument {
   fileType?: string;
   fileData?: string; // Data URL for download / preview
   notes?: string;
+  isSigned?: boolean;
 }
 
 export type ContractType = 'FAENA' | 'PLAZO_FIJO' | 'INDEFINIDO';
@@ -60,10 +63,12 @@ export interface Worker {
 }
 
 export interface WorkerContractCompliance {
-  status: 'NO_CONTRACT' | 'EXPIRED' | 'EXPIRING_SOON' | 'VALID' | 'RETIRED';
+  status: 'NO_CONTRACT' | 'PENDING_SIGNATURE' | 'EXPIRED' | 'EXPIRING_SOON' | 'VALID' | 'RETIRED';
   label: string;
   isBlinking: boolean;
   message?: string;
+  signedCount?: number;
+  templateCount?: number;
 }
 
 export interface Branch {
