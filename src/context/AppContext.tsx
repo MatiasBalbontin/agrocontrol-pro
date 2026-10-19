@@ -148,7 +148,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [settings, setSettings] = useState<AppSettings>(() => {
     try {
       const saved = localStorage.getItem(`${STORAGE_KEY}_settings`);
-      return saved ? { ...initialSettings, ...JSON.parse(saved) } : initialSettings;
+      const parsed = saved ? { ...initialSettings, ...JSON.parse(saved) } : initialSettings;
+      if (parsed.contractTemplate && parsed.contractTemplate.includes('#')) {
+        parsed.contractTemplate = parsed.contractTemplate
+          .replace(/^#+\s*/gm, '')
+          .replace(/<br\s*\/?>/gi, '\n')
+          .replace(/\*\*/g, '');
+      }
+      return parsed;
     } catch {
       return initialSettings;
     }
@@ -810,7 +817,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const generateContractText = (worker: Partial<Worker>, branchId?: string): string => {
-    const template = settings.contractTemplate || DEFAULT_CONTRACT_TEMPLATE;
+    let template = (settings.contractTemplate || DEFAULT_CONTRACT_TEMPLATE)
+      .replace(/^#+\s*/gm, '')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/\*\*/g, '');
     const targetBranchId = branchId || worker.branchId || (activeBranchId !== 'ALL' ? activeBranchId : branches[0]?.id);
     const branch = branches.find(b => b.id === targetBranchId) || branches[0];
 

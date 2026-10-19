@@ -60,73 +60,68 @@ export const CONTRACT_KEYS_BY_CATEGORY: {
   },
 ];
 
-export const DEFAULT_CONTRACT_TEMPLATE = `# CONTRATO DE TRABAJO
+export const DEFAULT_CONTRACT_TEMPLATE = `CONTRATO DE TRABAJO
 
 En {{CIUDAD_FIRMA}}, a {{FECHA_INGRESO}}, entre {{EMPRESA_NOMBRE}}, RUT {{EMPRESA_RUT}} con domicilio en {{EMPRESA_DOMICILIO}}, representada legalmente por don {{EMPRESA_REPRESENTANTE}} rut: {{EMPRESA_REPRESENTANTE_RUT}}, en adelante denominado "El Empleador";
 
 Y {{TRABAJADOR_NOMBRE}} Cédula de identidad N°{{TRABAJADOR_RUT}} nacido en {{TRABAJADOR_NACIMIENTO}}, estado civil {{TRABAJADOR_ESTADO_CIVIL}}, domiciliado en {{TRABAJADOR_DOMICILIO}}, en adelante denominado "El Trabajador", se ha convenido el siguiente {{MODALIDAD_CONTRATO}}:
 
-### 1. Naturaleza del contrato
+1. Naturaleza del contrato
 El presente contrato es de carácter temporal o de temporada y se celebra exclusivamente para la ejecución de una faena determinada, específicamente las labores {{LABOR}}, conforme al artículo 159 N°5 del Código del Trabajo.
 
 La prestación de servicios es discontinua e intermitente, y la citación para trabajar queda sujeta a las necesidades y requerimientos diarios u horarios de la faena específica que se identifica en el punto 2. Solo se devengará remuneración por los días efectivamente citados y trabajados.
 
 El trabajador declara conocer que este contrato tiene carácter de temporal o de temporada, conforme al artículo 159 N°5 del Código del Trabajo.
 
-### 2. Función y lugar de trabajo
+2. Función y lugar de trabajo
 El trabajador se compromete a ejecutar las funciones {{LABOR}} en el predio o instalación ubicada en {{FAENA_NOMBRE}}, {{FAENA_UBICACION}}, pudiendo ser trasladado dentro de la misma comuna o faena agrícola, siempre que ello no implique menoscabo.
 
-### 3. Jornada de trabajo
+3. Jornada de trabajo
 La jornada ordinaria máxima será de hasta {{JORNADA_SEMANAL}} horas semanales, distribuidas entre lunes y viernes, con un máximo de {{JORNADA_DIARIA}} horas diarias.
 
-**3.1.** Horario: El horario de inicio y término de la jornada será determinado y notificado por El Empleador al Trabajador según las necesidades de la faena, respetando siempre los límites legales.
+3.1. Horario: El horario de inicio y término de la jornada será determinado y notificado por El Empleador al Trabajador según las necesidades de la faena, respetando siempre los límites legales.
 
 La jornada diaria incluirá media hora de colación que no será imputable a la jornada laboral, y por ende, no será remunerada, conforme al artículo 34 del Código del Trabajo.
 
-**3.2. De la Citación:** El Trabajador se obliga a confirmar su disponibilidad para la faena con una antelación mínima de 24 horas si así se le requiere, quedando la obligación de prestar servicios estrictamente condicionada a la citación expresa del Empleador para un día determinado.
+3.2. De la Citación: El Trabajador se obliga a confirmar su disponibilidad para la faena con una antelación mínima de 24 horas si así se le requiere, quedando la obligación de prestar servicios estrictamente condicionada a la citación expresa del Empleador para un día determinado.
 
-### 4. Remuneración
+4. Remuneración
 El empleador pagará al trabajador una remuneración {{MODALIDAD_PAGO}} de \${{VALOR_TARIFA}} pesos chilenos, por cada día efectivamente trabajado, conforme al artículo 44 del Código del Trabajo.
 
 El pago se efectuará por períodos vencidos, dentro de los primeros diez días hábiles del mes siguiente, con los descuentos previsionales y de salud correspondientes.
 
-**4.1. Semana Corrida:** El pago de la Semana Corrida, conforme al artículo 45 del Código del Trabajo, solo procederá si se cumplen copulativamente todos los requisitos establecidos por la ley y la jurisprudencia administrativa vigente de la Dirección del Trabajo (DT), especialmente el de continuidad y exclusividad de la remuneración diaria. Dada la naturaleza intermitente y discontinua del presente contrato, el derecho al pago estará supeditado a la estricta interpretación de la DT.
+4.1. Semana Corrida: El pago de la Semana Corrida, conforme al artículo 45 del Código del Trabajo, solo procederá si se cumplen copulativamente todos los requisitos establecidos por la ley y la jurisprudencia administrativa vigente de la Dirección del Trabajo (DT), especialmente el de continuidad y exclusividad de la remuneración diaria. Dada la naturaleza intermitente y discontinua del presente contrato, el derecho al pago estará supeditado a la estricta interpretación de la DT.
 
-### 5. Cotizaciones previsionales y de salud
+5. Cotizaciones previsionales y de salud
 El empleador efectuará las retenciones y pagos previsionales correspondientes a {{AFP}}, salud ({{SALUD}}), y seguro de cesantía, conforme a las leyes vigentes.
 
 Asimismo, el trabajador se encontrará cubierto por la mutualidad correspondiente (Ley 16.744 sobre accidentes del trabajo y enfermedades profesionales).
 
-### 6. Feriado proporcional
+6. Feriado proporcional
 En caso de término del contrato, el trabajador tendrá derecho al pago de feriado proporcional conforme al artículo 73 del Código del Trabajo. Este se calculará a razón de 1,25 días hábiles por cada mes completo trabajado. El pago de la tasa especial superior de 2,5 días hábiles por mes solo aplicará si la Dirección del Trabajo, en razón de la faena específica y su duración, la califica expresamente como de temporada bajo la interpretación que concede dicha tasa.
 
-### 7. Causal de término
+7. Causal de término
 Este contrato finalizará, sin necesidad de desahucio ni pago de indemnización, por la causal del artículo 159 N°5 del Código del Trabajo, esto es, conclusión total de la faena específica que dio origen a la contratación.
 
-### 8. Reglamento interno y obligaciones
+8. Reglamento interno y obligaciones
 El trabajador declara haber recibido copia del Reglamento Interno de Higiene y Seguridad de la empresa, y comprometerse a cumplir las instrucciones, medidas preventivas y protocolos de seguridad establecidos.
 
-### 9. Domicilio y jurisdicción
+9. Domicilio y jurisdicción
 Para todos los efectos derivados del presente contrato, las partes fijan domicilio en la comuna de {{CIUDAD_FIRMA}} y se someten a la jurisdicción de los Tribunales de Justicia de {{CIUDAD_FIRMA}}.
 
-### 10. Declaración y firma
+10. Declaración y firma
 Ambas partes declaran haber leído íntegramente este contrato, firmando dos ejemplares del mismo, quedando uno en poder del trabajador.
 
-<br><br>
 
-**EL EMPLEADOR**
+EL EMPLEADOR
 
-<br>
 Firma: ____________________________________________
-<br>
 RUT: {{EMPRESA_RUT}}
-<br><br><br>
 
-**EL TRABAJADOR**
 
-<br>
+EL TRABAJADOR
+
 Firma: ____________________________________________
-<br>
 RUT: {{TRABAJADOR_RUT}}`;
 
 import { Worker, Branch, AppSettings } from '../types';
@@ -138,7 +133,10 @@ export function fillContractTemplate(
   branch?: Branch,
   settings?: AppSettings
 ): string {
-  let content = template || DEFAULT_CONTRACT_TEMPLATE;
+  let content = (template || DEFAULT_CONTRACT_TEMPLATE)
+    .replace(/^#+\s*/gm, '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/\*\*/g, '');
 
   // Empresa
   content = content.replace(/\{\{EMPRESA_NOMBRE\}\}/g, settings?.companyName || 'Agrícola & Servicios del Valle SpA');
