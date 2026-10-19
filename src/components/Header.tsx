@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { Building2, Settings, ChevronDown, Check, Users } from 'lucide-react';
+import { Building2, Settings, ChevronDown, Check } from 'lucide-react';
+import { PlantLogo } from './PlantLogo';
 
 interface HeaderProps {
   onOpenSettings: () => void;
@@ -40,9 +41,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         {/* Brand Zone */}
         <div className="flex items-center gap-3 shrink-0">
-          <div className="w-10 h-10 rounded-xl bg-emerald-800 text-white flex items-center justify-center shadow-xs">
-            <Users className="w-5 h-5 text-emerald-300" />
-          </div>
+          <PlantLogo className="w-10 h-10" />
           <div>
             <div className="flex items-center gap-2">
               <span className="font-extrabold text-lg sm:text-xl text-slate-900 tracking-tight truncate max-w-[200px] sm:max-w-xs md:max-w-sm" title={settings.companyName}>

@@ -23,6 +23,7 @@ if (!gotTheLock) {
       minWidth: 980,
       minHeight: 650,
       title: 'Legión - AgroControl Pro',
+      icon: path.join(__dirname, 'icon.png'),
       backgroundColor: '#f8fafc',
       autoHideMenuBar: true,
       show: false, // Esperar a ready-to-show para evitar parpadeos blancos

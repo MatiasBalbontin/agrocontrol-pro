@@ -12,6 +12,7 @@ $Shortcut = $WshShell.CreateShortcut($shortcutPath)
 $Shortcut.TargetPath = "wscript.exe"
 $Shortcut.Arguments = "`"$vbsLauncher`""
 $Shortcut.WorkingDirectory = $projectRoot
+$Shortcut.IconLocation = "$projectRoot\electron\icon.ico"
 $Shortcut.Description = "Sistema de Gestión Laboral y Recursos Humanos - AgroControl Pro"
 $Shortcut.Save()
 

@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b131f" />
+      <stop offset="100%" stop-color="#022c22" />
+    </linearGradient>
+    <linearGradient id="stemGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#059669" />
+      <stop offset="100%" stop-color="#10b981" />
+    </linearGradient>
+    <linearGradient id="leafGradLeft" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#059669" />
+      <stop offset="50%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#34d399" />
+    </linearGradient>
+    <linearGradient id="leafGradCenter" x1="50%" y1="100%" x2="50%" y2="0%">
+      <stop offset="0%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#6ee7b7" />
+    </linearGradient>
+    <linearGradient id="leafGradRight" x1="100%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#047857" />
+      <stop offset="50%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#34d399" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background squircle -->
+  <rect width="512" height="512" rx="128" fill="url(#bg)" />
+  <rect x="12" y="12" width="488" height="488" rx="116" stroke="#10b981" stroke-width="2" stroke-opacity="0.3" fill="none" />
+
+  <!-- Plant Sprout Group -->
+  <g filter="url(#glow)">
+    <!-- Root base arc -->
+    <path d="M180 410 C 230 405, 256 395, 256 385 C 256 395, 282 405, 332 410 C 290 418, 222 418, 180 410 Z" fill="#10b981" />
+
+    <!-- Stem -->
+    <path d="M256 390 Q 256 260 256 190" stroke="url(#stemGrad)" stroke-width="14" stroke-linecap="round" />
+
+    <!-- Left leaf -->
+    <path d="M252 300 C 220 280, 140 280, 128 200 C 140 160, 210 180, 246 250 Z" fill="url(#leafGradLeft)" />
+    <!-- Left leaf inner circuit trace -->
+    <path d="M148 205 Q 185 220 225 255" stroke="#a7f3d0" stroke-width="4" stroke-linecap="round" stroke-opacity="0.8" />
+    <circle cx="148" cy="205" r="5" fill="#a7f3d0" />
+    <circle cx="180" cy="226" r="4" fill="#a7f3d0" />
+
+    <!-- Center leaf -->
+    <path d="M256 210 C 230 160, 230 110, 256 80 C 282 110, 282 160, 256 210 Z" fill="url(#leafGradCenter)" />
+    <!-- Center leaf inner trace -->
+    <path d="M256 95 V 180" stroke="#d1fae5" stroke-width="4" stroke-linecap="round" stroke-opacity="0.9" />
+    <circle cx="256" cy="95" r="5" fill="#d1fae5" />
+    <circle cx="256" cy="135" r="4" fill="#d1fae5" />
+
+    <!-- Right leaf -->
+    <path d="M260 300 C 292 280, 372 280, 384 200 C 372 160, 302 180, 266 250 Z" fill="url(#leafGradRight)" />
+    <!-- Right leaf inner circuit trace -->
+    <path d="M364 205 Q 327 220 287 255" stroke="#a7f3d0" stroke-width="4" stroke-linecap="round" stroke-opacity="0.8" />
+    <circle cx="364" cy="205" r="5" fill="#a7f3d0" />
+    <circle cx="332" cy="226" r="4" fill="#a7f3d0" />
+  </g>
+</svg>
