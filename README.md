@@ -1,4 +1,4 @@
-# Legión / AgroControl Pro - Sistema de Gestión Laboral y Recursos Humanos en Terreno
+# Legión / AgroControl Pro - Sistema de Gestión Laboral y Recursos Humanos
 
 Sistema integral de gestión de personal, cuadrillas agrícolas, control de asistencia diaria, contratos de trabajo por faena (Código del Trabajo de Chile, Art. 159 N°5) e informes oficiales para contratistas agrícolas y empresas de servicios intensivos de mano de obra.
 
