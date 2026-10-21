@@ -73,8 +73,6 @@ export const ProductionCalendarModal: React.FC<ProductionCalendarModalProps> = (
     }
   }, [isOpen, selectedBranchId, activeBranchId, currentSelectedDate]);
 
-  if (!isOpen) return null;
-
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
@@ -172,6 +170,8 @@ export const ProductionCalendarModal: React.FC<ProductionCalendarModalProps> = (
   const recordedBranch = selectedHasProduction && selectedRecords[0]?.branchId
     ? branches.find(b => b.id === selectedRecords[0].branchId)
     : null;
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">

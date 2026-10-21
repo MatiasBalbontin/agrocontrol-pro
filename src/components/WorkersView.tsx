@@ -47,6 +47,7 @@ import {
 } from 'lucide-react';
 import { ContractPrintModal } from './ContractPrintModal';
 import { DocumentViewerModal } from './DocumentViewerModal';
+import { ErrorBoundary } from './ErrorBoundary';
 import {
   formatCLP,
   formatRUT,
@@ -2130,34 +2131,49 @@ export const WorkersView: React.FC = () => {
       })()}
 
       {/* MODAL DE GENERACIÓN E IMPRESIÓN DE CONTRATO OFICIAL */}
-      <ContractPrintModal
-        isOpen={isContractModalOpen}
+      <ErrorBoundary
+        isModal={true}
+        viewName="Emisión y Lectura de Contrato"
         onClose={() => setIsContractModalOpen(false)}
-        worker={contractModalWorker}
-        branchId={contractModalWorker?.branchId}
-        onContractAttached={() => {
-          setIsContractModalOpen(false);
-        }}
-      />
+      >
+        <ContractPrintModal
+          isOpen={isContractModalOpen}
+          onClose={() => setIsContractModalOpen(false)}
+          worker={contractModalWorker}
+          branchId={contractModalWorker?.branchId}
+          onContractAttached={() => {
+            setIsContractModalOpen(false);
+          }}
+        />
+      </ErrorBoundary>
 
       {/* MODAL DE VISUALIZACIÓN DE DOCUMENTOS (VER ARCHIVO / PDF / FOTO / CONTRATO) */}
-      <DocumentViewerModal
-        isOpen={!!viewingDoc}
-        doc={viewingDoc}
-        worker={viewingWorker}
-        companyName={settings?.companyName}
+      <ErrorBoundary
+        isModal={true}
+        viewName="Visor de Documentos del Expediente"
         onClose={() => {
           setViewingDoc(null);
           setViewingWorker(null);
         }}
-        onMarkAsSigned={docId => {
-          if (viewingWorker) {
-            markWorkerDocumentAsSigned(viewingWorker.id, docId);
+      >
+        <DocumentViewerModal
+          isOpen={!!viewingDoc}
+          doc={viewingDoc}
+          worker={viewingWorker}
+          companyName={settings?.companyName}
+          onClose={() => {
             setViewingDoc(null);
             setViewingWorker(null);
-          }
-        }}
-      />
+          }}
+          onMarkAsSigned={docId => {
+            if (viewingWorker) {
+              markWorkerDocumentAsSigned(viewingWorker.id, docId);
+              setViewingDoc(null);
+              setViewingWorker(null);
+            }
+          }}
+        />
+      </ErrorBoundary>
     </div>
   );
 };

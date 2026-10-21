@@ -21,12 +21,19 @@ export const ContractPrintModal: React.FC<ContractPrintModalProps> = ({
   const { generateContractText, branches, addWorkerDocument, settings } = useApp();
   const [copied, setCopied] = useState(false);
   const [attached, setAttached] = useState(false);
+  const [attachedMode, setAttachedMode] = useState<'PLANTILLA' | 'FIRMADO' | null>(null);
 
   if (!isOpen || !worker) return null;
 
   const targetBranchId = branchId || worker.branchId || branches[0]?.id;
   const branch = branches.find(b => b.id === targetBranchId) || branches[0];
-  const contractText = generateContractText(worker, targetBranchId);
+  let contractText = '';
+  try {
+    contractText = generateContractText(worker, targetBranchId);
+  } catch (err) {
+    console.error('Error generando texto de contrato:', err);
+    contractText = 'CONTRATO DE TRABAJO\n\nNo fue posible generar el contrato con los datos actuales del trabajador. Por favor consulte con el desarrollador o complete la información de la ficha.';
+  }
 
   const handleCopy = () => {
     navigator.clipboard.writeText(contractText);
@@ -37,8 +44,6 @@ export const ContractPrintModal: React.FC<ContractPrintModalProps> = ({
   const handlePrint = () => {
     window.print();
   };
-
-  const [attachedMode, setAttachedMode] = useState<'PLANTILLA' | 'FIRMADO' | null>(null);
 
   const handleAttachContract = (isSigned: boolean) => {
     if (!worker.id) return;

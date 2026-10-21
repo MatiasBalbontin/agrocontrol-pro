@@ -32,6 +32,7 @@ import {
   getUnitName,
 } from '../utils/formatters';
 import { ProductionCalendarModal } from './ProductionCalendarModal';
+import { ErrorBoundary } from './ErrorBoundary';
 import { TabType } from './Navbar';
 
 interface ProductionViewProps {
@@ -1187,21 +1188,27 @@ export const ProductionView: React.FC<ProductionViewProps> = ({ onNavigate }) =>
       )}
 
       {/* CALENDAR VERIFICATION MODAL (DAYS WITH PRODUCTION IN GREEN) */}
-      <ProductionCalendarModal
-        isOpen={isCalendarOpen}
+      <ErrorBoundary
+        isModal={true}
+        viewName="Calendario de Verificación de Producción"
         onClose={() => setIsCalendarOpen(false)}
-        selectedBranchId={selectedBranchId}
-        currentSelectedDate={selectedDate}
-        onSelectDate={(dateStr, branchId) => {
-          setSelectedDate(dateStr);
-          setSelectedProductionDate(dateStr);
-          if (branchId && branches.some(b => b.id === branchId)) {
-            setSelectedBranchId(branchId);
-            setActiveBranchId(branchId);
-          }
-          setActiveSubTab('batch');
-        }}
-      />
+      >
+        <ProductionCalendarModal
+          isOpen={isCalendarOpen}
+          onClose={() => setIsCalendarOpen(false)}
+          selectedBranchId={selectedBranchId}
+          currentSelectedDate={selectedDate}
+          onSelectDate={(dateStr, branchId) => {
+            setSelectedDate(dateStr);
+            setSelectedProductionDate(dateStr);
+            if (branchId && branches.some(b => b.id === branchId)) {
+              setSelectedBranchId(branchId);
+              setActiveBranchId(branchId);
+            }
+            setActiveSubTab('batch');
+          }}
+        />
+      </ErrorBoundary>
     </div>
   );
 };

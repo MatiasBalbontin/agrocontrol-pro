@@ -282,80 +282,87 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addAuditLog('EDITAR_SUCURSAL', `Edición de sucursal ${id}`);
   };
 
-  const generateContractText = (worker: Partial<Worker>, branchId?: string): string => {
-    let template = (settings.contractTemplate || DEFAULT_CONTRACT_TEMPLATE)
-      .replace(/^#+\s*/gm, '')
-      .replace(/<br\s*\/?>/gi, '\n')
-      .replace(/\*\*/g, '');
-    const targetBranchId = branchId || worker.branchId || (activeBranchId !== 'ALL' ? activeBranchId : branches[0]?.id);
-    const branch = branches.find(b => b.id === targetBranchId) || branches[0];
+  const generateContractText = (worker: Partial<Worker> = {}, branchId?: string): string => {
+    try {
+      const currentSettings = settings || {};
+      let template = (currentSettings.contractTemplate || DEFAULT_CONTRACT_TEMPLATE)
+        .replace(/^#+\s*/gm, '')
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/\*\*/g, '');
+      const branchList = branches || [];
+      const targetBranchId = branchId || worker?.branchId || (activeBranchId !== 'ALL' ? activeBranchId : branchList[0]?.id);
+      const branch = branchList.find(b => b.id === targetBranchId) || branchList[0];
 
-    const rep = settings.companyRepresentative || 'Juan Ignacio Valenzuela Prieto';
-    const repRut = settings.companyRepresentativeRut || '12.345.678-9';
-    const city = settings.signatureCity || (branch?.location ? branch.location.split(',')[1]?.trim() : 'Curicó') || 'Curicó';
+      const rep = currentSettings.companyRepresentative || 'Juan Ignacio Valenzuela Prieto';
+      const repRut = currentSettings.companyRepresentativeRut || '12.345.678-9';
+      const city = currentSettings.signatureCity || (branch?.location ? branch.location.split(',')[1]?.trim() : 'Curicó') || 'Curicó';
 
-    let nacString = '';
-    if (worker.birthDate) {
-      nacString = `${worker.birthDate}${worker.age ? ` (${worker.age} años)` : ''}`;
-    } else if (worker.age) {
-      nacString = `${worker.age} años de edad`;
-    } else {
-      nacString = '[Fecha de nacimiento no informada]';
+      let nacString = '';
+      if (worker?.birthDate) {
+        nacString = `${worker.birthDate}${worker.age ? ` (${worker.age} años)` : ''}`;
+      } else if (worker?.age) {
+        nacString = `${worker.age} años de edad`;
+      } else {
+        nacString = '[Fecha de nacimiento no informada]';
+      }
+
+      const modalidadContratoMap: Record<string, string> = {
+        FAENA: 'contrato de trabajo por faena determinada',
+        PLAZO_FIJO: 'contrato de trabajo a plazo fijo',
+        INDEFINIDO: 'contrato de trabajo indefinido',
+      };
+      const modalidadContratoStr = worker?.contractType
+        ? modalidadContratoMap[worker.contractType] || 'contrato de trabajo por faena determinada'
+        : 'contrato de trabajo por faena determinada';
+
+      const modalidadPagoStr = worker?.paymentMode
+        ? worker.paymentMode === 'DÍA'
+          ? 'diaria a razón'
+          : worker.paymentMode === 'HORA'
+          ? 'por hora a razón'
+          : worker.paymentMode === 'KILO'
+          ? 'a trato por kilo a razón'
+          : 'por tarea a razón'
+        : 'diaria a razón';
+
+      const tarifaStr = (worker?.unitRate || 28000).toLocaleString('es-CL');
+
+      const replacements: Record<string, string> = {
+        '{{EMPRESA_NOMBRE}}': currentSettings.companyName || 'Agrícola & Servicios del Valle SpA',
+        '{{EMPRESA_RUT}}': currentSettings.companyRut || '76.890.123-K',
+        '{{EMPRESA_DOMICILIO}}': currentSettings.companyAddress || "Av. Libertador Bernardo O'Higgins 450, Of. 602, Curicó",
+        '{{EMPRESA_REPRESENTANTE}}': rep,
+        '{{EMPRESA_REPRESENTANTE_RUT}}': repRut,
+        '{{TRABAJADOR_NOMBRE}}': worker?.name || '[NOMBRE DEL TRABAJADOR]',
+        '{{TRABAJADOR_RUT}}': worker?.rut || '[RUT DEL TRABAJADOR]',
+        '{{TRABAJADOR_NACIMIENTO}}': nacString,
+        '{{TRABAJADOR_ESTADO_CIVIL}}': worker?.maritalStatus || 'Soltero(a)',
+        '{{TRABAJADOR_DOMICILIO}}': worker?.address || '[Domicilio registrado en ficha]',
+        '{{TRABAJADOR_TELEFONO}}': worker?.phone || '[Teléfono no registrado]',
+        '{{LABOR}}': worker?.labor || 'Cosecha y Recolección',
+        '{{FAENA_NOMBRE}}': branch?.name || 'Faena Fundo Los Aromos',
+        '{{FAENA_UBICACION}}': branch?.location || 'Camino Los Niches Km 8.5, Curicó',
+        '{{CIUDAD_FIRMA}}': city,
+        '{{FECHA_INGRESO}}': worker?.hireDate ? formatDate(worker.hireDate) : formatDate(getTodayDateString()),
+        '{{FECHA_TERMINO}}': worker?.contractEndDate ? formatDate(worker.contractEndDate) : 'Conclusión total de la faena asignada',
+        '{{MODALIDAD_CONTRATO}}': modalidadContratoStr,
+        '{{MODALIDAD_PAGO}}': modalidadPagoStr,
+        '{{VALOR_TARIFA}}': tarifaStr,
+        '{{JORNADA_SEMANAL}}': worker?.weeklyHours ? worker.weeklyHours.replace(/[^0-9]/g, '') || '40' : '40',
+        '{{JORNADA_DIARIA}}': worker?.dailySchedule ? worker.dailySchedule.replace(/[^0-9]/g, '')?.slice(0, 1) || '8' : '8',
+        '{{AFP}}': worker?.afp || 'AFP Habitat',
+        '{{SALUD}}': worker?.health || 'Fonasa Tramo B',
+      };
+
+      let result = template;
+      for (const [tag, val] of Object.entries(replacements)) {
+        result = result.split(tag).join(val);
+      }
+      return result;
+    } catch (e) {
+      console.error('Error generando contrato:', e);
+      return DEFAULT_CONTRACT_TEMPLATE;
     }
-
-    const modalidadContratoMap: Record<string, string> = {
-      FAENA: 'contrato de trabajo por faena determinada',
-      PLAZO_FIJO: 'contrato de trabajo a plazo fijo',
-      INDEFINIDO: 'contrato de trabajo indefinido',
-    };
-    const modalidadContratoStr = worker.contractType
-      ? modalidadContratoMap[worker.contractType] || 'contrato de trabajo por faena determinada'
-      : 'contrato de trabajo por faena determinada';
-
-    const modalidadPagoStr = worker.paymentMode
-      ? worker.paymentMode === 'DÍA'
-        ? 'diaria a razón'
-        : worker.paymentMode === 'HORA'
-        ? 'por hora a razón'
-        : worker.paymentMode === 'KILO'
-        ? 'a trato por kilo a razón'
-        : 'por tarea a razón'
-      : 'diaria a razón';
-
-    const tarifaStr = (worker.unitRate || 28000).toLocaleString('es-CL');
-
-    const replacements: Record<string, string> = {
-      '{{EMPRESA_NOMBRE}}': settings.companyName || 'Agrícola & Servicios del Valle SpA',
-      '{{EMPRESA_RUT}}': settings.companyRut || '76.890.123-K',
-      '{{EMPRESA_DOMICILIO}}': settings.companyAddress || "Av. Libertador Bernardo O'Higgins 450, Of. 602, Curicó",
-      '{{EMPRESA_REPRESENTANTE}}': rep,
-      '{{EMPRESA_REPRESENTANTE_RUT}}': repRut,
-      '{{TRABAJADOR_NOMBRE}}': worker.name || '[NOMBRE DEL TRABAJADOR]',
-      '{{TRABAJADOR_RUT}}': worker.rut || '[RUT DEL TRABAJADOR]',
-      '{{TRABAJADOR_NACIMIENTO}}': nacString,
-      '{{TRABAJADOR_ESTADO_CIVIL}}': worker.maritalStatus || 'Soltero(a)',
-      '{{TRABAJADOR_DOMICILIO}}': worker.address || '[Domicilio registrado en ficha]',
-      '{{TRABAJADOR_TELEFONO}}': worker.phone || '[Teléfono no registrado]',
-      '{{LABOR}}': worker.labor || 'Cosecha y Recolección',
-      '{{FAENA_NOMBRE}}': branch?.name || 'Faena Fundo Los Aromos',
-      '{{FAENA_UBICACION}}': branch?.location || 'Camino Los Niches Km 8.5, Curicó',
-      '{{CIUDAD_FIRMA}}': city,
-      '{{FECHA_INGRESO}}': worker.hireDate ? formatDate(worker.hireDate) : formatDate(getTodayDateString()),
-      '{{FECHA_TERMINO}}': worker.contractEndDate ? formatDate(worker.contractEndDate) : 'Conclusión total de la faena asignada',
-      '{{MODALIDAD_CONTRATO}}': modalidadContratoStr,
-      '{{MODALIDAD_PAGO}}': modalidadPagoStr,
-      '{{VALOR_TARIFA}}': tarifaStr,
-      '{{JORNADA_SEMANAL}}': worker.weeklyHours ? worker.weeklyHours.replace(/[^0-9]/g, '') || '40' : '40',
-      '{{JORNADA_DIARIA}}': worker.dailySchedule ? worker.dailySchedule.replace(/[^0-9]/g, '')?.slice(0, 1) || '8' : '8',
-      '{{AFP}}': worker.afp || 'AFP Habitat',
-      '{{SALUD}}': worker.health || 'Fonasa Tramo B',
-    };
-
-    let result = template;
-    for (const [tag, val] of Object.entries(replacements)) {
-      result = result.split(tag).join(val);
-    }
-    return result;
   };
 
   const addWorker = (workerData: Omit<Worker, 'id'>): string => {

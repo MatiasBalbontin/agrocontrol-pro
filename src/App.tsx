@@ -11,6 +11,8 @@ import { AuditLogView } from './components/AuditLogView';
 import { SettingsModal } from './components/SettingsModal';
 import { CalendarView } from './components/CalendarView';
 
+import { ErrorBoundary } from './components/ErrorBoundary';
+
 function MainLayout() {
   const [currentTab, setCurrentTab] = useState<TabType>('dashboard');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -26,25 +28,57 @@ function MainLayout() {
 
       {/* Internal Scrollable Content Viewport */}
       <main className="flex-1 min-h-0 overflow-y-auto max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-3 pb-20 md:pb-4">
-        {currentTab === 'dashboard' && <DashboardView onNavigate={setCurrentTab} />}
-        {currentTab === 'calendar' && <CalendarView onNavigate={setCurrentTab} />}
-        {currentTab === 'workers' && <WorkersView />}
-        {currentTab === 'production' && <ProductionView onNavigate={setCurrentTab} />}
-        {currentTab === 'reports' && <ReportsView />}
-        {currentTab === 'branches' && <BranchesView />}
-        {currentTab === 'audit' && <AuditLogView />}
+        {currentTab === 'dashboard' && (
+          <ErrorBoundary viewName="Panel Principal" onNavigateHome={() => setCurrentTab('dashboard')}>
+            <DashboardView onNavigate={setCurrentTab} />
+          </ErrorBoundary>
+        )}
+        {currentTab === 'calendar' && (
+          <ErrorBoundary viewName="Calendario de Faena" onNavigateHome={() => setCurrentTab('dashboard')}>
+            <CalendarView onNavigate={setCurrentTab} />
+          </ErrorBoundary>
+        )}
+        {currentTab === 'workers' && (
+          <ErrorBoundary viewName="Gestión de Personal & Contratos" onNavigateHome={() => setCurrentTab('dashboard')}>
+            <WorkersView />
+          </ErrorBoundary>
+        )}
+        {currentTab === 'production' && (
+          <ErrorBoundary viewName="Asistencia & Producción Diaria" onNavigateHome={() => setCurrentTab('dashboard')}>
+            <ProductionView onNavigate={setCurrentTab} />
+          </ErrorBoundary>
+        )}
+        {currentTab === 'reports' && (
+          <ErrorBoundary viewName="Informes & Planillas" onNavigateHome={() => setCurrentTab('dashboard')}>
+            <ReportsView />
+          </ErrorBoundary>
+        )}
+        {currentTab === 'branches' && (
+          <ErrorBoundary viewName="Sucursales & Fundos" onNavigateHome={() => setCurrentTab('dashboard')}>
+            <BranchesView />
+          </ErrorBoundary>
+        )}
+        {currentTab === 'audit' && (
+          <ErrorBoundary viewName="Historial de Auditoría" onNavigateHome={() => setCurrentTab('dashboard')}>
+            <AuditLogView />
+          </ErrorBoundary>
+        )}
       </main>
 
       {/* Settings Modal */}
-      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      <ErrorBoundary isModal={true} viewName="Ajustes del Sistema" onClose={() => setIsSettingsOpen(false)}>
+        <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      </ErrorBoundary>
     </div>
   );
 }
 
 export default function App() {
   return (
-    <AppProvider>
-      <MainLayout />
-    </AppProvider>
+    <ErrorBoundary viewName="Aplicación Principal">
+      <AppProvider>
+        <MainLayout />
+      </AppProvider>
+    </ErrorBoundary>
   );
 }
